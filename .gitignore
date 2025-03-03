@@ -1,0 +1,15 @@
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+.env
+alembic/versions/
+postgres_data/
+__init__.pyc
+.idea/
+.vscode/
+*.log
+docker-compose.override.yml
+llama.gguf
