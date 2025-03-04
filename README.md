@@ -21,7 +21,7 @@ Proyecto de análisis, resumen y consulta de documentos usando FastAPI y modelos
 ### Configuración
 Crea un archivo `.env` con las siguientes variables:
 
-# Base de datos PostgreSQL
+#### Base de datos PostgreSQL
 DATABASE_URL=postgresql://postgres:<CONTRASEÑA>@<IP_CLOUD_SQL o localhost>:5432/analyze_db
 POSTGRES_DB=analyze_db
 POSTGRES_USER=postgres
@@ -29,37 +29,47 @@ POSTGRES_PASSWORD=<CONTRASEÑA>
 POSTGRES_HOST=<IP_CLOUD_SQL o localhost>
 POSTGRES_PORT=5432
 
-# Redis podría quedar igual si es local
+#### Redis podría quedar igual si es local
 REDIS_URL=redis://redis:6379/0
 
 
-# Seguridad JWT
+#### Seguridad JWT
 ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=30
 
-# Ruta del modelo LLM local
+#### Ruta del modelo LLM local
 LLM_MODEL_PATH=./models/mistral.gguf
 
-# Redis (para Celery)
+#### Redis (para Celery)
 REDIS_URL=redis://redis:6379/0
 
-### Instalacion de dependecias desde requirements.txt.
+### Instalacion de dependecias y docker
 
-# Instala las dependencias 
+#### Instala las dependencias 
 pip install -r requirements.txt
 
-# Construir los contenedores
-docker-compose build
+#### Construir los contenedores
+docker-compose build --no-cache
 
-# Subir (iniciar) los contenedores
+#### Subir (iniciar) los contenedores
 docker-compose up -d
 
-# Bajar (detener) los contenedores
+#### Bajar (detener) los contenedores
 docker-compose down
 
-# ver log de los contenedores en vivo.
+#### ver log de los contenedores en vivo.
 
 docker logs -f backend_doc_analyze
 
-# eliminar todo el contenedor
+#### eliminar todo el contenedor
 docker system prune -a
+
+### Configuración alembic dentro de docker una vez hecho el de build y antes de levantarlo.
+#### entrar al bash
+docker exec -it backend_doc_analyze bash
+
+#### en bash crear la carpeta version ya que esta no se sube con el repositorio  y generar migracion de alembic esto solo es la primera vez
+docker exec -it backend_doc_analyze bash
+mkdir -p /app/alembic/versions
+alembic revision --autogenerate -m "Initial migration"
+alembic upgrade head
