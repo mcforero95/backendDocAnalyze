@@ -10,14 +10,28 @@ from fastapi.security import OAuth2PasswordBearer
 from app.db.crud.conversation import create_conversation, add_message
 from app.db.models.conversation import Conversation  # Asegúrate de importar Conversation
 import logging
+import asyncio
+from fastapi import HTTPException
 
 logger = logging.getLogger(__name__)
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 router = APIRouter()
 
+async def safe_llm_process(func, *args, timeout_seconds=180, **kwargs):
+    try:
+        return await asyncio.wait_for(
+            func(*args, **kwargs),
+            timeout=timeout_seconds
+        )
+    except asyncio.TimeoutError:
+        raise HTTPException(
+            status_code=504,
+            detail=f"Tiempo de procesamiento del modelo excedido ({timeout_seconds} segundos)"
+        )
+
 @router.get("/summarize/{document_id}")
-def summarize(document_id: int, token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+async def summarize(document_id: int, token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     payload = decode_access_token(token)
     user_email = payload.get("sub")
     user = get_user_by_email(db, user_email)
@@ -29,11 +43,11 @@ def summarize(document_id: int, token: str = Depends(oauth2_scheme), db: Session
     if not document:
         raise HTTPException(status_code=404, detail="Documento no encontrado")
     
-    summary = summarize_text(document.content)
+    summary = await safe_llm_process(summarize_text, document.content)
     return {"summary": summary}
 
 @router.post("/ask/{document_id}")
-def ask(document_id: int, question: str, token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+async def ask(document_id: int, question: str, token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     payload = decode_access_token(token)
     user_email = payload.get("sub")
     user = get_user_by_email(db, user_email)
@@ -50,6 +64,6 @@ def ask(document_id: int, question: str, token: str = Depends(oauth2_scheme), db
         conversation = create_conversation(db, user.id, document_id)
         logger.info(f"Conversación creada con ID: {conversation.id}")
     
-    answer = answer_question(document.content, question)
+    answer = await safe_llm_process(answer_question, document.content, question)
     add_message(db, conversation.id, question, answer)
     return {"answer": answer}
