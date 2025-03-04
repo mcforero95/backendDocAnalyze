@@ -56,3 +56,10 @@ docker-compose up -d
 
 # Bajar (detener) los contenedores
 docker-compose down
+
+# ver log de los contenedores en vivo.
+
+docker logs -f app
+
+# eliminar todo el contenedor
+docker system prune -a
