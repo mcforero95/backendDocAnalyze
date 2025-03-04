@@ -11,7 +11,7 @@ from typing import List
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 router = APIRouter()
 
-@router.get("/conversations", response_model=List[ConversationListSchema])
+@router.get("/list", response_model=List[ConversationListSchema])
 def list_conversations(
     token: str = Depends(oauth2_scheme),
     db: Session = Depends(get_db)
@@ -28,7 +28,7 @@ def list_conversations(
 
     return conversations
 
-@router.get("/conversations/{conversation_id}", response_model=ConversationSchema)
+@router.get("/byId/{conversation_id}", response_model=ConversationSchema)
 def get_conversation_detail(conversation_id: int, db: Session = Depends(get_db)):
     conversation = get_conversation(db, conversation_id)
     if not conversation:
