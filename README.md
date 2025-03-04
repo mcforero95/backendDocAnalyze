@@ -59,7 +59,7 @@ docker-compose down
 
 # ver log de los contenedores en vivo.
 
-docker logs -f app
+docker logs -f backend_doc_analyze
 
 # eliminar todo el contenedor
 docker system prune -a
