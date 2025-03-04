@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1.endpoints import auth, documents, analysis
 from app.core.tasks import celery_app
+from app.api.v1.endpoints import conversations
 
 app = FastAPI(
     title="API de análisis de documentos",
@@ -20,6 +21,7 @@ app.add_middleware(
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["auth"])
 app.include_router(documents.router, prefix="/api/v1/documents", tags=["documents"])
 app.include_router(analysis.router, prefix="/api/v1/analysis", tags=["analysis"])
+app.include_router(conversations.router, prefix="/api/v1/conversations", tags=["conversations"])
 
 @app.get("/health")
 def health_check():

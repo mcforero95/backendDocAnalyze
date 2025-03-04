@@ -6,3 +6,4 @@ Base = declarative_base()
 import app.db.models.user  
 import app.db.models.document  
 import app.db.models.analysis  
+import app.db.models.conversation
