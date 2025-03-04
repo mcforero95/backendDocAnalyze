@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
 from app.db.models.conversation import Conversation, Message
+from sqlalchemy.orm import joinedload
 
 def create_conversation(db: Session, user_id: int, document_id: int):
     conversation = Conversation(user_id=user_id, document_id=document_id)
@@ -19,4 +20,6 @@ def get_conversations_by_user(db: Session, user_id: int):
     return db.query(Conversation).filter(Conversation.user_id == user_id).all()
 
 def get_conversation(db: Session, conversation_id: int):
-    return db.query(Conversation).filter(Conversation.id == conversation_id).first()
+    return db.query(Conversation).options(
+        joinedload(Conversation.messages)
+    ).filter(Conversation.id == conversation_id).first()
