@@ -12,6 +12,7 @@ from app.db.models.conversation import Conversation  # Asegúrate de importar Co
 import logging
 import asyncio
 from fastapi import HTTPException
+from starlette.concurrency import run_in_threadpool
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +22,7 @@ router = APIRouter()
 async def safe_llm_process(func, *args, timeout_seconds=180, **kwargs):
     try:
         return await asyncio.wait_for(
-            func(*args, **kwargs),
+            run_in_threadpool(func, *args, **kwargs),
             timeout=timeout_seconds
         )
     except asyncio.TimeoutError:
