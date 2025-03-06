@@ -16,7 +16,8 @@ Proyecto para análisis, resumen y consulta de documentos utilizando FastAPI, mo
 - Docker Compose
 - Modelo LLM en formato `.gguf` (Por ejemplo, **Mistral q4_k_m**).  
   ⚠️ *No incluido en el repositorio debido al peso. Debes descargarlo y colocarlo en la carpeta `/models` del backend.*
-- Link Descarga: https://drive.google.com/drive/folders/1967CAd9-_iccfcjFwj5eDRVjiIz6W8tx
+- Link Descarga Mistral: https://drive.google.com/drive/folders/1967CAd9-_iccfcjFwj5eDRVjiIz6W8tx
+- Link Descarga Contenedores Montados: https://drive.google.com/drive/folders/1FOHq7ymz65qvr_PBnv-LBNMOperoKSPM
 
 ### ✅ Clonar el repositorio y preparar el entorno
 
