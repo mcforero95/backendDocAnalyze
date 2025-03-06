@@ -18,6 +18,7 @@ Proyecto para análisis, resumen y consulta de documentos utilizando FastAPI, mo
   ⚠️ *No incluido en el repositorio debido al peso. Debes descargarlo y colocarlo en la carpeta `/models` del backend.*
 - Link Descarga Mistral: https://drive.google.com/drive/folders/1967CAd9-_iccfcjFwj5eDRVjiIz6W8tx
 - Link Descarga Contenedores Montados: https://drive.google.com/drive/folders/1FOHq7ymz65qvr_PBnv-LBNMOperoKSPM
+- Link Descar Coleccion Postman: https://drive.google.com/drive/folders/1Tw0xIg-lrJMwXHqczQPbuIYz-JP_3yqa
 
 ### ✅ Clonar el repositorio y preparar el entorno
 
@@ -100,3 +101,34 @@ docker system prune -a
 
 Por defecto, los contenedores utilizan **todos los recursos disponibles** (CPU y RAM) de la máquina donde se ejecuten.  
 Si se requiere limitar los recursos, se debe modificar manualmente el archivo `docker-compose.yml` añadiendo el bloque `deploy.resources.limits`.
+
+## ✅ Exportación de contenedores para compartir
+
+### 🔹 Exportar los contenedores:
+```bash
+docker save -o backend_doc_analyze.tar backend_doc_analyze
+docker save -o postgres_db.tar postgres:16
+docker save -o redis_cache.tar redis:7
+docker save -o frontend_doc_analyze.tar frontend_doc_analyze
+tar -cvf contenedores_proyecto.tar backend_doc_analyze.tar postgres_db.tar redis_cache.tar frontend_doc_analyze.tar
+```
+
+### 🔹 Importación en otra máquina de contenedores:
+
+1. Descargar y descomprimir el archivo:
+    ```bash
+    tar -xvf contenedores_proyecto.tar
+    ```
+
+2. Cargar las imágenes:
+    ```bash
+    docker load -i backend_doc_analyze.tar
+    docker load -i postgres_db.tar
+    docker load -i redis_cache.tar
+    docker load -i frontend_doc_analyze.tar
+    ```
+
+3. Levantar los servicios:
+    ```bash
+    docker-compose up -d
+    ```
