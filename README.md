@@ -106,26 +106,20 @@ Si se requiere limitar los recursos, se debe modificar manualmente el archivo `d
 
 ### 🔹 Exportar los contenedores:
 ```bash
-docker save -o backend_doc_analyze.tar backend_doc_analyze
-docker save -o postgres_db.tar postgres:16
-docker save -o redis_cache.tar redis:7
-docker save -o frontend_doc_analyze.tar frontend_doc_analyze
-tar -cvf contenedores_proyecto.tar backend_doc_analyze.tar postgres_db.tar redis_cache.tar frontend_doc_analyze.tar
+docker save -o backenddocanalyze-frontend.tar backenddocanalyze-frontend:latest
+docker save -o backenddocanalyze-app.tar backenddocanalyze-app:latest
+docker save -o postgres.tar postgres:16
+docker save -o redis.tar redis:7
 ```
 
 ### 🔹 Importación en otra máquina de contenedores:
 
-1. Descargar y descomprimir el archivo:
+1. Descargga los contenedores y carga las imágenes:
     ```bash
-    tar -xvf contenedores_proyecto.tar
-    ```
-
-2. Cargar las imágenes:
-    ```bash
-    docker load -i backend_doc_analyze.tar
-    docker load -i postgres_db.tar
-    docker load -i redis_cache.tar
-    docker load -i frontend_doc_analyze.tar
+    docker load -i backenddocanalyze-app.tar
+    docker load -i postgres.tar
+    docker load -i redis.tar
+    docker load -i backenddocanalyze-frontend.tar
     ```
 
 3. Levantar los servicios:
