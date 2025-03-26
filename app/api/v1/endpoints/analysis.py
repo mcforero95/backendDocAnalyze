@@ -43,28 +43,61 @@ async def summarize(document_id: int, token: str = Depends(oauth2_scheme), db: S
     document = next((doc for doc in documents if doc.id == document_id), None)
     if not document:
         raise HTTPException(status_code=404, detail="Documento no encontrado")
-    
+
+    # ⚙️ Generar resumen usando Gemini
     summary = await safe_llm_process(summarize_text, document.content)
+
+    # 💬 Verificar si ya existe una conversación
+    conversation = db.query(Conversation).filter_by(user_id=user.id, document_id=document_id).first()
+    if not conversation:
+        conversation = create_conversation(db, user.id, document_id)
+        logger.info(f"Conversación creada con ID: {conversation.id}")
+
+    # 🧠 Almacenar resumen como mensaje
+    add_message(
+        db=db,
+        conversation_id=conversation.id,
+        question="Resumen del documento",
+        answer=summary
+    )
+
     return {"summary": summary}
 
+
+from app.services.rag import get_most_relevant_chunks
+from app.services.question_answering import answer_question, answer_question_with_context
+
 @router.post("/ask/{document_id}")
-async def ask(document_id: int, question: str, token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+async def ask(
+    document_id: int,
+    question: str,
+    rag: bool = False,
+    token: str = Depends(oauth2_scheme),
+    db: Session = Depends(get_db)
+):
     payload = decode_access_token(token)
     user_email = payload.get("sub")
     user = get_user_by_email(db, user_email)
     if not user:
         raise HTTPException(status_code=401, detail="Usuario no autenticado")
-    
+
     documents = get_documents_by_user(db, user.id)
     document = next((doc for doc in documents if doc.id == document_id), None)
     if not document:
         raise HTTPException(status_code=404, detail="Documento no encontrado")
-    
+
     conversation = db.query(Conversation).filter_by(user_id=user.id, document_id=document_id).first()
     if not conversation:
         conversation = create_conversation(db, user.id, document_id)
         logger.info(f"Conversación creada con ID: {conversation.id}")
-    
-    answer = await safe_llm_process(answer_question, document.content, question)
+
+    if rag:
+        # Recuperar chunks relevantes y generar respuesta con contexto
+        chunks = get_most_relevant_chunks(db, document_id, question, top_k=3)
+        answer = await safe_llm_process(answer_question_with_context, chunks, question)
+    else:
+        # Usar el texto completo del documento como contexto
+        answer = await safe_llm_process(answer_question, document.content, question)
+
     add_message(db, conversation.id, question, answer)
     return {"answer": answer}

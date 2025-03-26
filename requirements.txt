@@ -51,3 +51,6 @@ uvicorn
 vine
 wcwidth
 httpx
+google-generativeai
+sentence-transformers
+tiktoken

@@ -6,7 +6,8 @@ class Settings(BaseSettings):
     DATABASE_URL: str
     ALGORITHM: str
     ACCESS_TOKEN_EXPIRE_MINUTES: int
-    LLM_MODEL_PATH: str 
+    GEMINI_API_KEY: str 
+    GEMINI_MODEL_NAME: str
     REDIS_URL: str 
     POSTGRES_DB: str
     POSTGRES_USER: str
