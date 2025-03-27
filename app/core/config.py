@@ -6,6 +6,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str
     ALGORITHM: str
     ACCESS_TOKEN_EXPIRE_MINUTES: int
+    SHARED_FILES_PATH: str
     GEMINI_API_KEY: str 
     GEMINI_MODEL_NAME: str
     REDIS_URL: str 

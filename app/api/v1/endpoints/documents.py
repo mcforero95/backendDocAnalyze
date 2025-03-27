@@ -27,18 +27,12 @@ def upload_document(
     if not user:
         raise HTTPException(status_code=401, detail="Usuario no autenticado")
 
-    text = extract_text(file)
-    if not text:
-        raise HTTPException(status_code=400, detail="No se pudo extraer texto del archivo.")
+    document, text = crud_document.create_document(db, file, user.id)
 
-    document = crud_document.create_document(
-        db, DocumentCreate(title=file.filename, content=text), user.id
-    )
-
-    #Generar chunks y embeddings y almacenarlos
+    # Procesar chunks y embeddings
     process_and_store_chunks_sqlalchemy(db=db, document_id=document.id, full_text=text)
 
-    return document
+    return document 
 
 @router.get("/listDocuments", response_model=List[DocumentOut])
 def list_documents_by_user(
