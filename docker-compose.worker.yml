@@ -6,7 +6,7 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - /mnt/nfs_shared:/app/shared
+      - /mnt/nfs_shared:/mnt/nfs_shared
     env_file:
       - .env
     depends_on:
