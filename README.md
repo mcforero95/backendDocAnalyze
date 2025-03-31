@@ -26,12 +26,15 @@ Proyecto para análisis, resumen y consulta de documentos utilizando FastAPI, re
 
 ```env
 # Base de datos PostgreSQL (nombre del servicio dentro del docker-compose)
-DATABASE_URL=postgresql://postgres:analyzedb@postgres:5432/analyze_db
+DATABASE_URL=postgresql://postgres:analyzedb@<IP VM>:5432/analyze_db
 POSTGRES_DB=analyze_db
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=analyzedb
-POSTGRES_HOST=postgres
+POSTGRES_HOST=<IP VM>
 POSTGRES_PORT=5432
+
+# Ruta de los archivos compartidos
+SHARED_FILES_PATH=/mnt/nfs_shared
 
 # Seguridad JWT
 ALGORITHM=HS256
@@ -44,20 +47,6 @@ GEMINI_MODEL_NAME=gemini-2.0-flash
 # Redis (para Celery)
 REDIS_URL=redis://redis:6379/0
 ```
-
----
-
-## ✅ Construcción y ejecución
-
-```bash
-docker-compose build --no-cache
-docker-compose up -d
-```
-
-Accede a:
-
-- **Frontend:** http://localhost:80/
-- **API Docs:** http://localhost:8000/docs
 
 ---
 
@@ -106,27 +95,35 @@ Accede a:
 
 ---
 
-## 🧪 Alembic (migración de base de datos)
-
-```bash
-alembic revision --autogenerate -m "initial"
-alembic upgrade head
-```
-
----
-
 ### ✅ Construcción y ejecución
 
 Desde la carpeta del backend (`backendDocAnalyze/`):
 
 #### 🔹 Construir los contenedores:
+
+Para iniciar en una VM GCP: 
+
 ```bash
-docker-compose build --no-cache
+docker-compose -f docker-compose.worker.yml build --no-cache
+```
+Para iniciar local:
+
+```bash
+docker-compose -f docker-compose.yml build --no-cache
 ```
 
 #### 🔹 Levantar los contenedores:
+
+Para levantar en una VM GCP:
+
 ```bash
-docker-compose up -d
+docker-compose -f docker-compose.worker.yml up -d
+```
+
+Para levantar en local:
+
+```bash
+docker-compose -f docker-compose.yml up -d
 ```
 
 #### 🔹 Ver logs en tiempo real del backend:
@@ -144,9 +141,10 @@ docker-compose down
 docker system prune -a
 ```
 
+
 ### ✅ Alembic (migración de base de datos)
 
-#### 🔹 Primer uso:
+#### Solo para primer uso o instalación:
 
 1. Accede al backend:
     ```bash
@@ -173,28 +171,3 @@ docker system prune -a
 
 Por defecto, los contenedores utilizan **todos los recursos disponibles** (CPU y RAM) de la máquina donde se ejecuten.  
 Si se requiere limitar los recursos, se debe modificar manualmente el archivo `docker-compose.yml` añadiendo el bloque `deploy.resources.limits`.
-
-## ✅ Exportación de contenedores para compartir
-
-### 🔹 Exportar los contenedores:
-```bash
-docker save -o backenddocanalyze-frontend.tar backenddocanalyze-frontend:latest
-docker save -o backenddocanalyze-app.tar backenddocanalyze-app:latest
-docker save -o postgres.tar postgres:16
-docker save -o redis.tar redis:7
-```
-
-### 🔹 Importación en otra máquina de contenedores:
-
-1. Descargga los contenedores y carga las imágenes:
-    ```bash
-    docker load -i backenddocanalyze-app.tar
-    docker load -i postgres.tar
-    docker load -i redis.tar
-    docker load -i backenddocanalyze-frontend.tar
-    ```
-
-3. Levantar los servicios:
-    ```bash
-    docker-compose up -d
-    ```
