@@ -70,14 +70,14 @@ REDIS_URL=redis://redis:6379/0
 `POST /ask/{document_id}?rag=true`
 
 ### Params:
-
+```
 | rag       | true                 |
 | question  | Pregunta del usuario |
-
+```
 ---
 
 ## 🧱 Modelo de datos principal
-
+```
 +------------------+-------------------+---------------------------+----+----+---------------------+
 | Tabla            | Columna           | Tipo                      | PK | FK | Referencia          |
 +------------------+-------------------+---------------------------+----+----+---------------------+
@@ -115,7 +115,7 @@ REDIS_URL=redis://redis:6379/0
 | users            | email             | character varying         | N  | N  | —                   |
 | users            | hashed_password   | character varying         | N  | N  | —                   |
 +------------------+-------------------+---------------------------+----+----+---------------------+
-
+```
 
 ### Relaciones:
 - analysis.document_id        → documents.id
