@@ -7,10 +7,11 @@ Proyecto para análisis, resumen y consulta de documentos utilizando FastAPI, re
 
 ## 🚀 Tecnologías utilizadas
 
-- **Backend:** Python 3.10, FastAPI, PostgreSQL, Alembic
-- **LLM:** Gemini IA de Google vía API (antes: llama.cpp con modelo `.gguf`)
+- **Backend:** Python 3.10, FastAPI, PostgreSQL, Alembic(Para Migración BD)
+- **LLM:** Gemini IA de Google vía API Flash 2.0
 - **Embeddings locales:** Sentence Transformers (`all-MiniLM-L6-v2`)
 - **Orquestación:** Docker y Docker Compose
+- **Despliegue:** GCP
 
 ---
 
@@ -21,11 +22,12 @@ Proyecto para análisis, resumen y consulta de documentos utilizando FastAPI, re
 - Docker y Docker Compose
 - Clave de API de Google para Gemini IA
 - Variables de entorno configuradas
+- IP VM de la BD.
 
 ### ✅ Variables de entorno
 
 ```env
-# Base de datos PostgreSQL (nombre del servicio dentro del docker-compose)
+# Base de datos PostgreSQL 
 DATABASE_URL=postgresql://postgres:analyzedb@<IP VM>:5432/analyze_db
 POSTGRES_DB=analyze_db
 POSTGRES_USER=postgres
@@ -33,7 +35,7 @@ POSTGRES_PASSWORD=analyzedb
 POSTGRES_HOST=<IP VM>
 POSTGRES_PORT=5432
 
-# Ruta de los archivos compartidos
+# Ruta de los archivos compartidos nfs
 SHARED_FILES_PATH=/mnt/nfs_shared
 
 # Seguridad JWT
@@ -41,7 +43,7 @@ ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=30
 
 # Ruta del modelo de lenguaje`
-GEMINI_API_KEY=Aqui tu apikey
+GEMINI_API_KEY=<Aqui tu apikey>
 GEMINI_MODEL_NAME=gemini-2.0-flash
 
 # Redis (para Celery)
@@ -62,36 +64,66 @@ REDIS_URL=redis://redis:6379/0
 
 ---
 
-## 📌 Cómo usar RAG
+## 📌 Cómo usar RAG para preguntas al LLM sobre el documento
 
 ### Endpoint:
 `POST /ask/{document_id}?rag=true`
 
-### Parámetros:
+### Params:
 
-| Nombre    | Tipo   | Descripción                                 |
-|-----------|--------|---------------------------------------------|
-| rag       | bool   | (Opcional) Si se usa RAG. Default: false    |
-
-### Body:
-
-| question  | Pregunta del usuario                        |
+| rag       | true                 |
+| question  | Pregunta del usuario |
 
 ---
 
 ## 🧱 Modelo de datos principal
 
-### 📄 `documents`
-- `id`, `title`, `content`, `owner_id`
++------------------+-------------------+---------------------------+----+----+---------------------+
+| Tabla            | Columna           | Tipo                      | PK | FK | Referencia          |
++------------------+-------------------+---------------------------+----+----+---------------------+
+| alembic_version  | version_num       | character varying         | Y  | N  | —                   |
++------------------+-------------------+---------------------------+----+----+---------------------+
+| analysis         | id                | integer                   | Y  | N  | —                   |
+| analysis         | document_id       | integer                   | N  | Y  | documents(id)       |
+| analysis         | result            | text                      | N  | N  | —                   |
+| analysis         | summary           | text                      | N  | N  | —                   |
++------------------+-------------------+---------------------------+----+----+---------------------+
+| conversations    | id                | integer                   | Y  | N  | —                   |
+| conversations    | user_id           | integer                   | N  | Y  | users(id)           |
+| conversations    | document_id       | integer                   | N  | Y  | documents(id)       |
+| conversations    | created_at        | timestamp without tz      | N  | N  | —                   |
++------------------+-------------------+---------------------------+----+----+---------------------+
+| document_chunks  | id                | integer                   | Y  | N  | —                   |
+| document_chunks  | document_id       | integer                   | N  | Y  | documents(id)       |
+| document_chunks  | chunk_text        | text                      | N  | N  | —                   |
+| document_chunks  | embedding         | json                      | N  | N  | —                   |
+| document_chunks  | chunk_index       | integer                   | N  | N  | —                   |
++------------------+-------------------+---------------------------+----+----+---------------------+
+| documents        | id                | integer                   | Y  | N  | —                   |
+| documents        | title             | character varying         | N  | N  | —                   |
+| documents        | content           | character varying         | N  | N  | —                   |
+| documents        | owner_id          | integer                   | N  | Y  | users(id)           |
++------------------+-------------------+---------------------------+----+----+---------------------+
+| messages         | id                | integer                   | Y  | N  | —                   |
+| messages         | conversation_id   | integer                   | N  | Y  | conversations(id)   |
+| messages         | question          | text                      | N  | N  | —                   |
+| messages         | answer            | text                      | N  | N  | —                   |
+| messages         | created_at        | timestamp without tz      | N  | N  | —                   |
++------------------+-------------------+---------------------------+----+----+---------------------+
+| users            | id                | integer                   | Y  | N  | —                   |
+| users            | username          | character varying         | N  | N  | —                   |
+| users            | email             | character varying         | N  | N  | —                   |
+| users            | hashed_password   | character varying         | N  | N  | —                   |
++------------------+-------------------+---------------------------+----+----+---------------------+
 
-### 🧩 `document_chunks`
-- `id`, `document_id`, `chunk_text`, `embedding`, `chunk_index`
 
-### 💬 `conversations`
-- `id`, `user_id`, `document_id`, `created_at`
-
-### 💭 `messages`
-- `id`, `conversation_id`, `question`, `answer`, `created_at`
+### Relaciones:
+- analysis.document_id        → documents.id
+- conversations.user_id       → users.id
+- conversations.document_id   → documents.id
+- document_chunks.document_id → documents.id
+- documents.owner_id          → users.id
+- messages.conversation_id    → conversations.id
 
 ---
 
@@ -142,7 +174,7 @@ docker system prune -a
 ```
 
 
-### ✅ Alembic (migración de base de datos)
+### Luejo de levantar contenedores ejecuta la migración de la BD con Alembic (PRIMER USO).
 
 #### Solo para primer uso o instalación:
 
@@ -161,13 +193,12 @@ docker system prune -a
     alembic revision --autogenerate -m "Initial migration"
     alembic upgrade head
     ```
+4. Solo si hay actualizaciones sobre el modelo de datos ejecuta el siguiente comando:
+    ```bash
+    alembic upgrade head
+    ```
 
 ## 🌐 Accesos
 
-- **Frontend:** http://localhost:80/
-- **Backend (FastAPI docs):** http://localhost:8000/docs
-
-## ⚠️ Uso de recursos
-
-Por defecto, los contenedores utilizan **todos los recursos disponibles** (CPU y RAM) de la máquina donde se ejecuten.  
-Si se requiere limitar los recursos, se debe modificar manualmente el archivo `docker-compose.yml` añadiendo el bloque `deploy.resources.limits`.
+- **Frontend:** http://35.209.28.34/
+- **Backend (FastAPI docs):** http://35.209.132.4:8000/docs
