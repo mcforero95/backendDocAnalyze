@@ -18,6 +18,7 @@ httpx
 iniconfig
 packaging
 tzdata
+alembic
 
 # AI & NLP
 sentence-transformers
