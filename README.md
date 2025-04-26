@@ -1,17 +1,18 @@
-
 # 📄 Backend y Frontend de Análisis de Documentos con LLM
 
-Proyecto para análisis, resumen y consulta de documentos utilizando FastAPI, recuperación de contexto (RAG), Gemini IA y PostgreSQL.
+Proyecto para análisis, resumen y consulta de documentos utilizando FastAPI, recuperación de contexto (RAG), Gemini IA y PostgreSQL, desplegado sobre GCP de forma escalable.
 
 ---
 
 ## 🚀 Tecnologías utilizadas
 
-- **Backend:** Python 3.10, FastAPI, PostgreSQL, Alembic(Para Migración BD)
+- **Backend:** Python 3.10, FastAPI, PostgreSQL (Cloud SQL), Alembic
 - **LLM:** Gemini IA de Google vía API Flash 2.0
 - **Embeddings locales:** Sentence Transformers (`all-MiniLM-L6-v2`)
-- **Orquestación:** Docker y Docker Compose
-- **Despliegue:** GCP
+- **Mensajería:** Google Cloud Pub/Sub
+- **Almacenamiento de documentos:** Google Cloud Storage
+- **Orquestación:** Docker
+- **Despliegue:** GCP (Compute Engine + Load Balancer + Autoscaling)
 
 ---
 
@@ -22,45 +23,50 @@ Proyecto para análisis, resumen y consulta de documentos utilizando FastAPI, re
 - Docker y Docker Compose
 - Clave de API de Google para Gemini IA
 - Variables de entorno configuradas
-- IP VM de la BD.
+- IP pública de tu instancia de Cloud SQL (Base de Datos PostgreSQL en GCP).
 
 ### ✅ Variables de entorno
 
 ```env
-# Base de datos PostgreSQL 
-DATABASE_URL=postgresql://postgres:analyzedb@<IP VM>:5432/analyze_db
+# Base de datos PostgreSQL (Cloud SQL)
+DATABASE_URL=postgresql://postgres:analyzedb@<IP CLOUD SQL>:5432/analyze_db
 POSTGRES_DB=analyze_db
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=analyzedb
-POSTGRES_HOST=<IP VM>
+POSTGRES_HOST=<IP CLOUD SQL>
 POSTGRES_PORT=5432
-
-# Ruta de los archivos compartidos nfs
-SHARED_FILES_PATH=/mnt/nfs_shared
 
 # Seguridad JWT
 ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=30
 
-# Ruta del modelo de lenguaje`
-GEMINI_API_KEY=<Aqui tu apikey>
+# Ruta del modelo de lenguaje
+GEMINI_API_KEY=<Tu API Key de Gemini>
 GEMINI_MODEL_NAME=gemini-2.0-flash
 
-# Redis (para Celery)
+# Redis (para cachear datos)
 REDIS_URL=redis://redis:6379/0
+
+# Configuración de GCP
+GCP_PROJECT_ID=<ID Proyecto GCP>
+CLOUD_STORAGE_BUCKET=doc-analyze-uploads
+PUBSUB_TOPIC=doc-process-topic
+PUBSUB_SUBSCRIPTION=doc-process-subscription
 ```
 
 ---
 
 ## 🧠 Funcionalidades clave
 
-- ✅ Subida de documentos (`.pdf`, `.docx`, `.txt`)
-- ✅ Extracción y segmentación del texto en *chunks*
-- ✅ Generación de **embeddings** por chunk
-- ✅ Resumen del documento usando **Gemini**
-- ✅ Chat con el documento vía preguntas/respuestas
-- ✅ **Recuperación de Contexto (RAG)** con chunks relevantes
-- ✅ Historial de conversaciones y mensajes por usuario
+- ✅ Subida de documentos (`.pdf`, `.docx`, `.txt`) a **Cloud Storage**.
+- ✅ Procesamiento de documentos de forma asíncrona usando **Pub/Sub** y **Workers**.
+- ✅ Extracción y segmentación del texto en *chunks*.
+- ✅ Generación de **embeddings** por chunk.
+- ✅ Resumen automático del documento usando **Gemini IA**.
+- ✅ Chat de preguntas y respuestas sobre el contenido.
+- ✅ **Recuperación de contexto (RAG)** usando los chunks relevantes.
+- ✅ Historial de conversaciones por usuario.
+- ✅ Escalabilidad automática en GCP con **Autoscaling** y **Load Balancer**.
 
 ---
 
@@ -73,6 +79,9 @@ REDIS_URL=redis://redis:6379/0
 ```
 | rag       | true                 |
 | question  | Pregunta del usuario |
+```
+
+---
 ```
 ---
 
@@ -127,63 +136,50 @@ REDIS_URL=redis://redis:6379/0
 
 ---
 
-### ✅ Construcción y ejecución
+## ✅ Construcción y ejecución
 
 Desde la carpeta del backend (`backendDocAnalyze/`):
 
-#### 🔹 Construir los contenedores:
-
-Para iniciar en una VM GCP: 
+#### 🔹 Construir contenedores:
 
 ```bash
-docker-compose -f docker-compose.worker.yml build --no-cache
+docker-compose build --no-cache
 ```
-Para iniciar local:
+
+#### 🔹 Levantar contenedores:
 
 ```bash
-docker-compose -f docker-compose.yml build --no-cache
+docker-compose up -d
 ```
 
-#### 🔹 Levantar los contenedores:
+#### 🔹 Ver logs del backend:
 
-Para levantar en una VM GCP:
-
-```bash
-docker-compose -f docker-compose.worker.yml up -d
-```
-
-Para levantar en local:
-
-```bash
-docker-compose -f docker-compose.yml up -d
-```
-
-#### 🔹 Ver logs en tiempo real del backend:
 ```bash
 docker logs -f backend_doc_analyze
 ```
 
 #### 🔹 Detener todos los contenedores:
+
 ```bash
 docker-compose down
 ```
 
 #### 🔹 Limpiar contenedores e imágenes:
+
 ```bash
 docker system prune -a
 ```
 
+---
 
-### Luejo de levantar contenedores ejecuta la migración de la BD con Alembic (PRIMER USO).
+### 🗄️ Migraciones de base de datos (Primer uso o cambios de modelos)
 
-#### Solo para primer uso o instalación:
-
-1. Accede al backend:
+1. Accede al contenedor backend:
     ```bash
     docker exec -it backend_doc_analyze bash
     ```
 
-2. Crea la carpeta de migraciones (si no existe):
+2. Crea carpeta de migraciones (si no existe):
     ```bash
     mkdir -p /app/alembic/versions
     ```
@@ -193,12 +189,26 @@ docker system prune -a
     alembic revision --autogenerate -m "Initial migration"
     alembic upgrade head
     ```
-4. Solo si hay actualizaciones sobre el modelo de datos ejecuta el siguiente comando:
+
+4. Posteriormente, solo ejecutar cuando haya cambios en el modelo de datos:
     ```bash
     alembic upgrade head
     ```
 
+---
+
 ## 🌐 Accesos
 
-- **Frontend:** http://35.209.28.34/
-- **Backend (FastAPI docs):** http://35.209.132.4:8000/docs
+- **Frontend:** http://<IP Frontend>/
+- **Backend (FastAPI docs):** http://<IP Backend>:8000/docs
+
+---
+
+# ⚡️ Notas importantes
+
+- Los archivos **no se almacenan en disco local**. Todo se guarda en **Cloud Storage**.
+- El procesamiento de documentos es **asíncrono** y distribuido entre múltiples **Workers**.
+- La base de datos ahora es **Cloud SQL** en GCP, no local.
+- El sistema es escalable a cientos o miles de usuarios gracias a **Autoscaling** de GCP.
+
+---

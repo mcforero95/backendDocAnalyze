@@ -2,15 +2,15 @@ from fastapi import APIRouter, UploadFile, File, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.db.crud import document as crud_document, user as crud_user
-from app.db.schemas.document import DocumentOut, DocumentCreate
+from app.db.schemas.document import DocumentOut
 from app.core.security import decode_access_token
-from app.services.document_processor import extract_text
 from fastapi.security import OAuth2PasswordBearer
 from typing import List
-from app.db.schemas.document import DocumentOut
-from app.services.document_processor import extract_text, process_and_store_chunks_sqlalchemy
 from app.db.schemas.document_chunk import DocumentChunkOut
 from app.db.crud.document_chunk import get_chunks_by_document
+from app.services.cloud_storage_service import upload_file_to_gcs  # (Nuevo servicio)
+from app.services.pubsub_service import publish_to_pubsub         # (Nuevo servicio)
+from app.core.config import settings
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 router = APIRouter()
@@ -27,12 +27,29 @@ def upload_document(
     if not user:
         raise HTTPException(status_code=401, detail="Usuario no autenticado")
 
-    document, text = crud_document.create_document(db, file, user.id)
+    # 1. Crear registro del documento en base de datos
+    document = crud_document.create_document_metadata(db, file, user.id)
 
-    # Procesar chunks y embeddings
-    process_and_store_chunks_sqlalchemy(db=db, document_id=document.id, full_text=text)
+    # 2. Subir el archivo original a Cloud Storage
+    destination_blob_name = f"{user.id}/{document.id}/{file.filename}"
+    upload_file_to_gcs(
+        bucket_name=settings.CLOUD_STORAGE_BUCKET,
+        upload_file=file,
+        destination_blob_name=destination_blob_name
+    )
 
-    return document 
+    # 3. Publicar mensaje en Pub/Sub para que el worker procese
+    publish_to_pubsub(
+        topic_name=settings.PUBSUB_TOPIC,
+        data={
+            "user_id": user.id,
+            "document_id": document.id,
+            "bucket_name": settings.CLOUD_STORAGE_BUCKET,
+            "blob_name": destination_blob_name
+        }
+    )
+
+    return document
 
 @router.get("/listDocuments", response_model=List[DocumentOut])
 def list_documents_by_user(
