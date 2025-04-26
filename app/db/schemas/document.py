@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from typing import Optional  # Importar Optional
 
 class DocumentCreate(BaseModel):
     title: str
@@ -7,7 +8,7 @@ class DocumentCreate(BaseModel):
 class DocumentOut(BaseModel):
     id: int
     title: str
-    content: str
+    content: Optional[str]
     owner_id: int
 
     class Config:
