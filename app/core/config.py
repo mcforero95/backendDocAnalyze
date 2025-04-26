@@ -14,9 +14,6 @@ class Settings(BaseSettings):
     ALGORITHM: str
     ACCESS_TOKEN_EXPIRE_MINUTES: int
 
-    # --- Archivos compartidos (ya no NFS) ---
-    SHARED_FILES_PATH: str  # Lo vamos a eliminar progresivamente en el resto del código
-
     # --- Integraciones IA ---
     GEMINI_API_KEY: str
     GEMINI_MODEL_NAME: str
