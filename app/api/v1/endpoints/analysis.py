@@ -9,6 +9,7 @@ from app.services.question_answering import answer_question
 from fastapi.security import OAuth2PasswordBearer
 from app.db.crud.conversation import create_conversation, add_message
 from app.db.models.conversation import Conversation  # Asegúrate de importar Conversation
+from app.db.crud.document_chunk import get_chunks_by_document
 import logging
 import asyncio
 from fastapi import HTTPException
@@ -44,8 +45,16 @@ async def summarize(document_id: int, token: str = Depends(oauth2_scheme), db: S
     if not document:
         raise HTTPException(status_code=404, detail="Documento no encontrado")
 
+    # 🧠 Recuperar todos los chunks del documento
+    chunks = get_chunks_by_document(db, document_id)
+    chunk_texts = [chunk.chunk_text for chunk in chunks if chunk.chunk_text and chunk.chunk_text.strip()]
+    full_text = "\n".join(chunk_texts)
+
+    if not full_text.strip():
+        return {"summary": "No hay texto para resumir."}
+
     # ⚙️ Generar resumen usando Gemini
-    summary = await safe_llm_process(summarize_text, document.content)
+    summary = await safe_llm_process(summarize_text, full_text)
 
     # 💬 Verificar si ya existe una conversación
     conversation = db.query(Conversation).filter_by(user_id=user.id, document_id=document_id).first()
@@ -62,6 +71,7 @@ async def summarize(document_id: int, token: str = Depends(oauth2_scheme), db: S
     )
 
     return {"summary": summary}
+
 
 
 from app.services.rag import get_most_relevant_chunks
